@@ -330,6 +330,25 @@ void avlog_do_search(boost::asio::io_service & io_service,
 	// 根据 channel_name , query string , date 像数据库查找
 	BOOST_LOG_TRIVIAL(debug) << " c = " << c << " q =  " << q << " date= " << date ;
 
+	std::vector<std::string>	r_date(1000);
+	std::vector<std::string>	r_channel(1000);
+	std::vector<std::string>	r_nick(1000);
+	std::vector<std::string>	r_message(1000);
+
+	db << "select date,channel,nick,message from avlog where channel=:c and q like \"%" << q << "%\""
+		, soci::into(r_date)
+		, soci::into(r_channel)
+		, soci::into(r_nick)
+		, soci::into(r_message)
+		, soci::use(c);
+
+	// print out the result
+
+	BOOST_FOREACH(std::string m, r_message)
+	{
+		std::cout << "message: " << m << std::endl;
+	}
+
 	io_service.post(
 		boost::asio::detail::bind_handler(handler,boost::system::error_code())
 	);
