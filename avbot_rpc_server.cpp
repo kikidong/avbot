@@ -174,12 +174,15 @@ void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t byt
 				yield avhttpd::async_write_response(*m_socket, avhttpd::errc::internal_server_error,
 					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
 				);
+				return;
+
 			}
 			else
 			{
 				yield avhttpd::async_write_response(*m_socket, avhttpd::errc::not_found,
 					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
 				);
+				return;
 			}
 		}
 		else if( m_request.find(avhttpd::http_options::request_method) == "POST")
