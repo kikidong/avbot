@@ -322,10 +322,17 @@ static void init_database(soci::session & db)
 	");";
 }
 
-void avlog_do_search(std::string c, std::string q, std::string date,
-	boost::function<void (boost::system::error_code)> cb, soci::session & db)
+void avlog_do_search(boost::asio::io_service & io_service,
+	std::string c, std::string q, std::string date,
+	boost::function<void (boost::system::error_code)> handler,
+	soci::session & db)
 {
+	// 根据 channel_name , query string , date 像数据库查找
+	BOOST_LOG_TRIVIAL(debug) << " c = " << c << " q =  " << q << " date= " << date ;
 
+	io_service.post(
+		boost::asio::detail::bind_handler(handler,boost::system::error_code())
+	);
 };
 
 static void avbot_rpc_server(
@@ -336,7 +343,12 @@ static void avbot_rpc_server(
 	boost::make_shared<detail::avbot_rpc_server>(
 		m_socket,
 		boost::ref(mybot.on_message),
-		boost::bind(avlog_do_search, _1,_2,_3,_4, boost::ref(db))
+		boost::bind(
+			avlog_do_search,
+			boost::ref(m_socket->get_io_service()),
+			_1,_2,_3,_4,
+			boost::ref(db)
+		)
 	)->start();
 }
 
