@@ -335,7 +335,7 @@ void avlog_do_search(boost::asio::io_service & io_service,
 	std::vector<std::string>	r_nick(1000);
 	std::vector<std::string>	r_message(1000);
 
-	db << "select date,channel,nick,message from avlog where channel=:c and q like \"%" << q << "%\""
+	db << "select date,channel,nick,message from avlog where channel=:c and message like \"%" << q << "%\""
 		, soci::into(r_date)
 		, soci::into(r_channel)
 		, soci::into(r_nick)
