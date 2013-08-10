@@ -161,7 +161,7 @@ void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t byt
 				yield do_search(what[1],what[2],what[3],
 					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
 				);
-
+				return;
 			}else if(
 				boost::regex_match(
 					m_request.find(avhttpd::http_options::request_uri),
@@ -175,7 +175,6 @@ void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t byt
 					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
 				);
 				return;
-
 			}
 			else
 			{
