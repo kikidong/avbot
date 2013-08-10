@@ -17,9 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
 #include <boost/json_create_escapes_utf8.hpp>
-
+#include <boost/function.hpp>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -108,6 +107,7 @@ void avbot_rpc_server::on_pop(boost::shared_ptr< boost::asio::streambuf > v)
 // 数据操作跑这里，嘻嘻.
 void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t bytestransfered)
 {
+	boost::smatch what;
 	//for (;;)
 	reenter(this)
 	{for (;;){
@@ -143,8 +143,44 @@ void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t byt
 		// 解析 HTTP
 		if(m_request.find(avhttpd::http_options::request_method) == "GET" )
 		{
-			// 等待消息, 并发送.
-			yield m_responses.async_pop(boost::bind(&avbot_rpc_server::on_pop, shared_from_this(), _1));
+			if(m_request.find(avhttpd::http_options::request_uri)=="/message")
+			{
+				// 等待消息, 并发送.
+				yield m_responses.async_pop(
+					boost::bind(&avbot_rpc_server::on_pop, shared_from_this(), _1)
+				);
+			}else if(
+				boost::regex_match(
+					m_request.find(avhttpd::http_options::request_uri),
+					what,
+					boost::regex("/search\\?channel=([^&]*)&q=([^&]*)&date=([^&]*).*")
+				)
+			)
+			{
+				// 取出这几个参数, 到数据库里查找, 返回结果吧.
+				yield do_search(what[1],what[2],what[3],
+					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
+				);
+
+			}else if(
+				boost::regex_match(
+					m_request.find(avhttpd::http_options::request_uri),
+					what,
+					boost::regex("/search(\\?)?")
+				)
+			)
+			{
+				// missing parameter
+				yield avhttpd::async_write_response(*m_socket, avhttpd::errc::internal_server_error,
+					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
+				);
+			}
+			else
+			{
+				yield avhttpd::async_write_response(*m_socket, avhttpd::errc::not_found,
+					boost::bind(&avbot_rpc_server::client_loop, shared_from_this(), _1, 0)
+				);
+			}
 		}
 		else if( m_request.find(avhttpd::http_options::request_method) == "POST")
 		{
@@ -183,8 +219,8 @@ void avbot_rpc_server::client_loop(boost::system::error_code ec, std::size_t byt
 void avbot_rpc_server::callback_message(const boost::property_tree::ptree& jsonmessage)
 {
 	boost::shared_ptr<boost::asio::streambuf> buf(new boost::asio::streambuf);
-	std::ostream	stream(buf.get());
-	std::stringstream	teststream;
+	std::ostream stream(buf.get());
+	std::stringstream teststream;
 
 	js::write_json(stream, jsonmessage);
 

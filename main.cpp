@@ -322,12 +322,21 @@ static void init_database(soci::session & db)
 	");";
 }
 
+void avlog_do_search(std::string c, std::string q, std::string date,
+	boost::function<void (boost::system::error_code)> cb, soci::session & db)
+{
+
+};
+
 static void avbot_rpc_server(
 	boost::shared_ptr<boost::asio::ip::tcp::socket> m_socket,
-	avbot & mybot)
+	avbot & mybot,
+	soci::session & db)
 {
 	boost::make_shared<detail::avbot_rpc_server>(
-		m_socket, boost::ref(mybot.on_message)
+		m_socket,
+		boost::ref(mybot.on_message),
+		boost::bind(avlog_do_search, _1,_2,_3,_4, boost::ref(db))
 	)->start();
 }
 
@@ -765,7 +774,7 @@ rungui:
 			boost::acceptor_server(
 				io_service,
 				boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), rpcport),
-				boost::bind(avbot_rpc_server, _1, boost::ref(mybot))
+				boost::bind(avbot_rpc_server, _1, boost::ref(mybot), boost::ref(avlogdb))
 			);
 		}
 		catch (...)
@@ -775,7 +784,7 @@ rungui:
 				boost::acceptor_server(
 					io_service,
 					boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), rpcport),
-					boost::bind(avbot_rpc_server, _1, boost::ref(mybot))
+					boost::bind(avbot_rpc_server, _1, boost::ref(mybot), boost::ref(avlogdb))
 				);
 			}
 			catch (...)
